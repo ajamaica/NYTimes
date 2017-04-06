@@ -15,6 +15,7 @@ struct Article: Mappable {
     let url: String
     let title: String
     let abstract: String
+    let published_date: String
     let byline : String
     
     init(map: Mapper) throws {
@@ -22,6 +23,7 @@ struct Article: Mappable {
         try id = map.from("id")
         try url = map.from("url")
         try title = map.from("title")
+        try published_date = map.from("published_date")
         try abstract = map.from("abstract")
         try byline = map.from("byline")
 

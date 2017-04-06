@@ -46,6 +46,29 @@ class ArticlesTableViewController: UITableViewController,UISearchResultsUpdating
             return controller
             
         })()
+        
+        _ = self.tableView.setUpFooterRefresh {  [weak self] in
+            
+            if(self?.resultSearchController.isActive)!{
+                
+                self?.page = (self?.page)! + 1
+                let search_query_txt = self?.resultSearchController.searchBar.text
+                self?.get_search(query: search_query_txt!,page: (self?.page)!)
+                
+            }
+            
+            }.SetUp { (footer) in
+                
+                footer.setText("Pull up to refresh", mode: RefreshKitFooterText.pullToRefresh)
+                footer.setText("No more repos", mode: RefreshKitFooterText.noMoreData)
+                footer.setText("Refreshing...", mode: RefreshKitFooterText.refreshing)
+                footer.setText("Tap to load more", mode: RefreshKitFooterText.tapToRefresh)
+                footer.setText("Scroll to load more", mode: RefreshKitFooterText.scrollAndTapToRefresh)
+                
+                footer.textLabel.textColor  = UIColor.black
+                footer.refreshMode = .scrollAndTap
+        }
+
     }
 
     
@@ -83,10 +106,20 @@ class ArticlesTableViewController: UITableViewController,UISearchResultsUpdating
                     
                     //try response.mapArray() as [Article]
                     let docs_array = try response.mapArray(withKeyPath:"response.docs") as [Doc]
-                    self.results_docs = docs_array
-                    self.tableView.reloadData()
-                } catch {
                     
+                    if(self.page > 1){
+                        
+                        self.results_docs = self.results_docs + docs_array
+                        self.tableView.reloadData()
+                        self.tableView.endFooterRefreshing()
+                        
+                    }else{
+                        self.results_docs = docs_array
+                        self.tableView.reloadData()
+                    }
+                    
+                } catch {
+                    self.page = self.page - 1
                 }
             }
         }
@@ -127,7 +160,7 @@ class ArticlesTableViewController: UITableViewController,UISearchResultsUpdating
             cell.mediaView.isHidden = true
             cell.titletxt.text = doc.title
             cell.excerpttxt.text = doc.abstract
-            cell.datetxt.text = doc.byline
+            cell.datetxt.text = doc.pub_date
             cell.excerpttxt.sizeToFit()
             cell.titletxt.sizeToFit()
             cell.datetxt.sizeToFit()
@@ -137,7 +170,7 @@ class ArticlesTableViewController: UITableViewController,UISearchResultsUpdating
             cell.mediaView.isHidden = true
             cell.titletxt.text = article.title
             cell.excerpttxt.text = article.abstract
-            cell.datetxt.text = article.byline
+            cell.datetxt.text = article.published_date
             cell.excerpttxt.sizeToFit()
             cell.titletxt.sizeToFit()
             cell.datetxt.sizeToFit()
