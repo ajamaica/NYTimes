@@ -8,22 +8,44 @@
 
 import UIKit
 import Moya_ModelMapper
+import PullToRefreshKit
+import Moya
 
-class ArticlesTableViewController: UITableViewController {
-
+class ArticlesTableViewController: UITableViewController,UISearchResultsUpdating {
+    var page = 0
+    
+    var resultSearchController = UISearchController()
+    var results_article = [Article]()
+    var results_docs = [Doc]()
+    var search_request:Cancellable? = nil
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        // Uncomment the following line to preserve selection between presentations
-        // self.clearsSelectionOnViewWillAppear = false
-
-        // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
-        // self.navigationItem.rightBarButtonItem = self.editButtonItem()
+        self.definesPresentationContext = true
         
         
         get_mostView()
-        get_search(query: "siria")
+        setUpTableView()
+    }
+    
+    func setUpTableView(){
+        self.tableView.estimatedRowHeight = 106.0
+        self.tableView.rowHeight = UITableViewAutomaticDimension
+
         
+        self.resultSearchController = ({
+            
+            let controller = UISearchController(searchResultsController: nil)
+            controller.searchResultsUpdater = self
+            controller.dimsBackgroundDuringPresentation = false
+            controller.searchBar.sizeToFit()
+            controller.searchBar.barStyle = UIBarStyle.black
+            controller.searchBar.barTintColor = UIColor.white
+            controller.searchBar.backgroundColor = UIColor(red: 46.0/255.0, green: 14.0/255.0, blue: 74.0/255.0, alpha: 1.0)
+            self.tableView.tableHeaderView = controller.searchBar
+            return controller
+            
+        })()
     }
 
     
@@ -35,6 +57,8 @@ class ArticlesTableViewController: UITableViewController {
                     
                     //try response.mapArray() as [Article]
                     let article_array = try response.mapArray(withKeyPath:"results") as [Article]
+                    self.results_article = article_array
+                    self.tableView.reloadData()
                 } catch {
                     
                 }
@@ -42,15 +66,25 @@ class ArticlesTableViewController: UITableViewController {
         }
     }
     
-    func get_search( query: String){
-        NYTimesProvider.request(.articlesearch(query)) { result in
+    func get_search( query: String,page:Int){
+        
+        if(query.isEmpty){
+            return
+        }
+        
+        if(search_request != nil){
+            search_request?.cancel()
+        }
+        
+        search_request = NYTimesProvider.request(.articlesearch(query,page)) { result in
             
             if case let .success(response) = result {
                 do {
                     
                     //try response.mapArray() as [Article]
                     let docs_array = try response.mapArray(withKeyPath:"response.docs") as [Doc]
-                    print(docs_array)
+                    self.results_docs = docs_array
+                    self.tableView.reloadData()
                 } catch {
                     
                 }
@@ -66,24 +100,65 @@ class ArticlesTableViewController: UITableViewController {
     // MARK: - Table view data source
 
     override func numberOfSections(in tableView: UITableView) -> Int {
-        // #warning Incomplete implementation, return the number of sections
-        return 0
+        return 1
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        // #warning Incomplete implementation, return the number of rows
-        return 0
+        
+        if(self.resultSearchController.isActive){
+            
+            return self.results_docs.count
+        }else{
+            return self.results_article.count
+        }
+
+        
+        
     }
 
-    /*
+    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "reuseIdentifier", for: indexPath)
+        let cell = tableView.dequeueReusableCell(withIdentifier: "ArticleTableViewCell", for: indexPath) as! ArticleTableViewCell
 
-        // Configure the cell...
+        
+        if(self.resultSearchController.isActive){
+            
+            let doc = self.results_docs[indexPath.row] as! Doc
+            cell.mediaView.isHidden = true
+            cell.titletxt.text = doc.title
+            cell.excerpttxt.text = doc.abstract
+            cell.datetxt.text = doc.byline
+            cell.excerpttxt.sizeToFit()
+            cell.titletxt.sizeToFit()
+            cell.datetxt.sizeToFit()
+            
+        }else{
+            let article = self.results_article[indexPath.row] as! Article
+            cell.mediaView.isHidden = true
+            cell.titletxt.text = article.title
+            cell.excerpttxt.text = article.abstract
+            cell.datetxt.text = article.byline
+            cell.excerpttxt.sizeToFit()
+            cell.titletxt.sizeToFit()
+            cell.datetxt.sizeToFit()
+        }
 
         return cell
     }
-    */
+    
+    
+    func updateSearchResults(for searchController: UISearchController) {
+        
+        results_docs = [Doc]()
+        self.tableView.reloadData()
+        self.page = 1
+        
+        get_search(query: searchController.searchBar.text!, page: self.page)
+        
+    }
+    
+
+
 
     /*
     // Override to support conditional editing of the table view.

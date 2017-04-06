@@ -13,7 +13,7 @@ let NY_API_KEY = "28fed6d7f29348f984a91bbbfe14eada"
 
 
 public enum NYTimes {
-    case articlesearch(String)
+    case articlesearch(String,Int)
     case mostviewed(String,String)
     
 }
@@ -25,7 +25,7 @@ extension NYTimes: TargetType {
         switch self {
         case .mostviewed(let section,let date):
             return "/mostpopular/v2/mostviewed/\(section)/\(date).json"
-        case .articlesearch(let q):
+        case .articlesearch(let q,let search):
             return "/search/v2/articlesearch.json"
         }
     }
@@ -37,8 +37,9 @@ extension NYTimes: TargetType {
     public var parameters: [String: Any]? {
         var param = ["api-key" : NY_API_KEY]
         switch self {
-        case .articlesearch(let q):
+        case .articlesearch(let q,let page):
             param["q"] = q
+            param["page"] = "\(page)"
             break
         case .mostviewed(_,_):
             break
